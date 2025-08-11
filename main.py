@@ -14,48 +14,15 @@ from torch.nn.init import constant_, xavier_uniform_
 
 class MyLinear(Module):
     def __init__(self, input_size, output_size):
-        """ TODO:
-        Sets up the following Parameters:
-            self.weight - A Parameter holding the weights of the layer, of size (output_size, input_size).
-            self.bias - A Parameter holding the biases of the layer, of size (output_size,).
-        Note that these have the same names as their equivalents in torch.nn.LSTMCell
-        and thus serve similar purposes. Feel free to initialize these how you like here; prior to their use,
-        a separate method will initialize these (which you will also need to fill in below).
-        You may also set other diagnostics at this point, but these are not strictly necessary."""
         super(MyLinear, self).__init__()
         self.weight = randn((output_size, input_size))
         self.bias = randn(output_size)
         
     def forward(self, inputs):
-        """ TODO:
-        Performs the forward propagation of a linear layer.
-        Input:
-            inputs - the input to the cell, of size (input_size,)
-        Output:
-            (your name here) - the output to the cell, of size (output_size,) """
         return matmul(inputs, self.weight.t()) + self.bias
 
 class MyLSTMCell(Module):
     def __init__(self, input_size, hidden_size):
-        """ TODO:
-        # Sets up the following Parameters:
-        #     Note: For the weight and bias setup, 
-        #           make sure to follow the order of (input_gate, forget_gate, cell_gate, output_gate)
-        #     self.weight_ih - A Parameter holding the weights w_i, w_f, w_c, and w_o,
-        #         each of size (hidden_size, input_size), concatenated along the first dimension
-        #         so that the total size of the tensor is (4*hidden_size, input_size).
-        #     self.bias_ih - A Parameter holding the components of the biases b_i, b_f, b_c, and b_o
-        #         with respect to the parts of self.weight_ih, each of size (hidden_size,) and similarly
-        #         concatenated along the first dimension to yield a (4*hidden_size,) tensor.
-        #     self.weight_hh - A Parameter holding the weights u_i, u_f, u_c, and u_o,
-        #         of the same shape and structure as self.weight_ih.
-        #     self.bias_hh - A Parameter holding the components of the biases b_i, b_f, b_c, and b_o
-        #         with respect to the parts of self.weight_hh, of the same shape and structure as self.bias_ih.
-        # Note that these have the same names as their equivalents in torch.nn.LSTMCell
-        # and thus serve similar purposes. Feel free to initialize these how you like here; prior to their use,
-        # a separate method will initialize these (which you will also need to fill in below).
-        # You may define layers for the Tanh and Sigmoid functions here, and you may also save other
-        # diagnostics at this point, but these are not strictly necessary. """
         super(MyLSTMCell, self).__init__()
         self.weight_ih = randn((4 * hidden_size, input_size))
         self.bias_ih = randn((4 * hidden_size,))
@@ -64,17 +31,6 @@ class MyLSTMCell(Module):
         self.hidden_size = hidden_size
 
     def forward(self, x, h_in, c_in):
-        """ TODO:
-        Performs the forward propagation of an LSTM cell.
-        Inputs:
-            x - The input to the cell, of size (batch_size,input_size)
-            h_in - The initial hidden state h for this timestep, of size (batch_size,hidden_size).
-            c_in - The initial memory cell c for this timestep, of size (batch_size,hidden_size).
-        Outputs:
-           h_out - The resulting (hidden state) output h, of the same size as h_in.
-           c_out - The resulting memory cell c, of the same size as c_in.
-        Note that c_out should be passed through a tanh layer before it is used when
-        computing h_out. """
         bias_ih = self.bias_ih.reshape((4 * self.hidden_size, 1))
         bias_hh = self.bias_hh.reshape((4 * self.hidden_size, 1))
         sigmoid = Sigmoid()
@@ -91,13 +47,6 @@ class MyLSTMCell(Module):
 
 class LSTM(Module):
     def __init__(self, input_size, hidden_size):
-        """ TODO:
-        Sets up the following:
-            self.lstm - a MyLSTMCell with input_size and hidden_size as constructor inputs.
-            self.linear - a MyLinear layer with hidden_size and input_size as constructor inputs.
-            self.bn - a BatchNorm1d layer of size input_size which does NOT have learnable affine parameters.
-            self.hidden_size - the hidden size passed in to this constructor.
-        You may also save the input size if that becomes useful to you later. """
         super(LSTM, self).__init__()
         self.lstm = MyLSTMCell(input_size, hidden_size)
         self.linear = MyLinear(hidden_size, input_size)
@@ -105,14 +54,6 @@ class LSTM(Module):
         self.hidden_size = hidden_size
 
     def initWeight(self, init_forget_bias=1):
-        """ TODO:
-        Goes through the parameters of this Module and operates on the weights
-        as follows:
-            - Any 'weight's should be initialized using the xavier_uniform_ distribution.
-            - The 'bias'es used with the forget gate should be set to init_forget_bias.
-              All other biases should be zero.
-              (Here you might find torch.Tensor.chunk useful.)
-            - All other parameters can be set to zero. """
         xavier_uniform_(self.lstm.weight_hh)
         xavier_uniform_(self.lstm.weight_ih)
 
@@ -126,27 +67,10 @@ class LSTM(Module):
         self.linear.bias = zeros(self.linear.bias.shape)
 
     def initHidden(self, batch_size):
-        """ TODO:
-        Defines an initial hidden state self.h and an initial memory cell self.c,
-        both of size (batch_size, self.hidden_size), as Variables containing all zeros. """
         self.h = zeros((batch_size, self.hidden_size))
         self.c = zeros((batch_size, self.hidden_size))
 
     def forward(self, inputs, n_frames):
-        """ TODO:
-        Produces vectors in the motion subspace of the latent space of images
-        (from which the generator generates video frames).
-        Assume that initHidden has already been run. Iterate for n_frames,
-        repeating the same inputs as the input to every frame in the sequence.
-        After each frame, the hidden state output should be saved,
-        then each of those saved states should be passed through the linear and
-        batch normalization layers, and the results of these should be stacked
-        along a new first dimension.
-        
-        Inputs:
-            inputs - The inputs to the LSTM cell, of size (batch_size, input_size).
-        Outputs:
-            outputs - Stacked hidden states, of size (n_frames, batch_size, input_size). """
         outputs = zeros((n_frames, inputs.shape[0], inputs.shape[1]))
         for frame in range(n_frames):
            self.h, self.c = self.lstm(inputs, self.h, self.c)
